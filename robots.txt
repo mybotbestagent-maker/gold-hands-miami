@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://mybotbestagent-maker.github.io/gold-hands-miami/sitemap.xml
+Sitemap: https://goldhandsmia.com/sitemap.xml
