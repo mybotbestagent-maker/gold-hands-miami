@@ -132,7 +132,7 @@ window.addEventListener('scroll', () => {
 const contactForm = document.getElementById('contactForm');
 
 if (contactForm) {
-  contactForm.addEventListener('submit', function (e) {
+  contactForm.addEventListener('submit', async function (e) {
     e.preventDefault();
 
     const formData = new FormData(this);
@@ -144,17 +144,59 @@ if (contactForm) {
       return;
     }
 
-    // Show success (in production, this would submit to a backend)
+    // SMS consent checkbox validation
+    const smsConsent = document.getElementById('smsConsent');
+    if (smsConsent && !smsConsent.checked) {
+      alert('Please agree to receive SMS messages to continue.');
+      smsConsent.focus();
+      return;
+    }
+
     const btn = this.querySelector('.btn-primary');
     const originalText = btn.innerHTML;
-    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Request Sent!';
-    btn.style.background = '#28a745';
 
-    setTimeout(() => {
+    // Show sending state
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg> Sending...';
+    btn.disabled = true;
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        throw new Error('Server error');
+      }
+
+      // Success
+      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Request Sent!';
+      btn.style.background = '#28a745';
+      this.reset();
+
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = '';
+        btn.disabled = false;
+      }, 4000);
+
+    } catch (err) {
+      // Fallback: open mailto with form data
+      const subject = encodeURIComponent('Quote Request from ' + data.name);
+      const body = encodeURIComponent(
+        'Name: ' + data.name + '\n' +
+        'Phone: ' + data.phone + '\n' +
+        'Email: ' + (data.email || 'N/A') + '\n' +
+        'Service: ' + (data.service || 'N/A') + '\n' +
+        'Message: ' + (data.message || 'N/A')
+      );
+      window.location.href = 'mailto:handymangoldhands@gmail.com?subject=' + subject + '&body=' + body;
+
       btn.innerHTML = originalText;
       btn.style.background = '';
-      this.reset();
-    }, 3000);
+      btn.disabled = false;
+    }
   });
 }
 
@@ -197,24 +239,4 @@ if (heroSection) {
   }, { threshold: 0.3 });
 
   heroObserver.observe(heroSection);
-}
-
-// ===== GOOGLE ADS CONVERSION TRACKING PLACEHOLDER =====
-// Replace 'AW-XXXXXXXXX' with your actual Google Ads conversion ID
-// and 'XXXXXXX' with your conversion label
-function gtag_report_conversion(url) {
-  var callback = function () {
-    if (typeof(url) != 'undefined') {
-      window.location = url;
-    }
-  };
-
-  if (typeof gtag !== 'undefined') {
-    gtag('event', 'conversion', {
-      'send_to': 'AW-XXXXXXXXX/XXXXXXX',
-      'event_callback': callback
-    });
-  }
-
-  return false;
 }
